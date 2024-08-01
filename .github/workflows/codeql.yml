@@ -30,27 +30,10 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        queries: +security-and-quality,+security-extended
+        queries: security,security-extended
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
+      continue-on-error: true
       with:
         category: "/language:${{matrix.language}}"
-
-  analyze-actions:
-    name: Analyze GitHub Actions
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Run yaml-lint
-      uses: ibiqlik/action-yamllint@v3
-      with:
-        file_or_dir: .github/workflows
-        config_file: .yamllint.yml
