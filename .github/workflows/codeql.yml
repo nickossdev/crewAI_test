@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'javascript' ]  # 'javascript' will analyze YAML files
+        language: [ 'python', 'javascript' ]
 
     steps:
     - name: Checkout repository
@@ -30,10 +30,9 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
-        queries: security,security-extended
+        packs: codeql/${{ matrix.language }}-queries:security-extended
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
-      continue-on-error: true
       with:
         category: "/language:${{matrix.language}}"
