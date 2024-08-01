@@ -1,47 +1,68 @@
-name: "CodeQL with Extended Checks and YAML Security Analysis"
+name: "CodeQL Security Scan"
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
 jobs:
   analyze:
-    name: Analyze Python Code and YAML Files
+    name: Analyze
     runs-on: ubuntu-latest
     permissions:
+      actions: read
+      contents: read
       security-events: write
 
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - language: python
-          build-mode: none
+        language: [ 'python', 'javascript' ]  # 'javascript' will analyze YAML files
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
 
-    # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@v2
       with:
         languages: ${{ matrix.language }}
-        queries: +security-extended,security-and-quality
+        queries: +security-and-quality,+security-extended
 
-    - name: Perform CodeQL Analysis on Python Code
-      uses: github/codeql-action/analyze@v3
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
       with:
         category: "/language:${{matrix.language}}"
 
-    - name: Initialize CodeQL for YAML
-      uses: github/codeql-action/init@v3
-      with:
-        languages: yaml
+  analyze-actions:
+    name: Analyze GitHub Actions
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
 
-    - name: Perform CodeQL Analysis on YAML Files
-      uses: github/codeql-action/analyze@v3
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Run yaml-lint
+      uses: ibiqlik/action-yamllint@v3
       with:
-        category: "/language:yaml"
+        file_or_dir: .github/workflows
+        config_file: .yamllint.yml
+
+    - name: Run Trivy vulnerability scanner in IaC mode
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        hide-progress: false
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
